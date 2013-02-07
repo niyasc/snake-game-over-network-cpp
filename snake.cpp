@@ -1,0 +1,385 @@
+#include<GL/glut.h>
+#include<math.h>
+#include<string.h>
+#include<stdio.h>
+#include<unistd.h>
+#define PI 3.14
+#define R 10
+#define SNAKE 2
+#define FOOD 2
+GLint winWidth=800;
+GLint winHeight=600;
+void circle(float x, float y, float r) 
+{ 
+	float delta_theta = 0.01;
+
+	glBegin( GL_POLYGON ); // OR GL_LINE_LOOP
+
+		for( float angle = 0; angle < 2*PI; angle += delta_theta )
+		glVertex3f(x+ r*cos(angle), y+r*sin(angle), 0 );
+
+	glEnd();
+}
+void init()
+{
+	glClearColor(0.0,0.0,0.0,0.0);
+	glMatrixMode(GL_PROJECTION);
+	gluOrtho2D(0,winWidth,0,winHeight);
+
+}
+class Color
+{
+	public :
+		float r,g,b;
+		/*Color(float r,float g,float b)
+		{
+			Color::r=r;
+			Color::g=g;
+			Color::b=b;
+		}*/
+};
+class Food
+{
+	public:
+		Color color;
+		GLint x,y;
+		void Generate()
+		{
+			color.r=(float)((random()%4)/4.0);
+			color.g=(float)((random()%4)/4.0);
+			color.b=(float)((random()%4)/4.0);
+			x=random()%winWidth;
+			y=random()%winHeight;
+		}
+		Food()
+		{
+			color.r=(float)((random()%4)/4.0);
+			color.g=(float)((random()%4)/4.0);
+			color.b=(float)((random()%4)/4.0);
+			x=random()%winWidth;
+			y=random()%winHeight;
+		}
+}f[FOOD];
+class Point
+{
+	public:
+		int x,y;
+		Point *next;
+		Point(int x,int y)
+		{
+			Point::x=x;
+			Point::y=y;
+			next=NULL;
+		}
+};
+class Snake
+{
+	public:
+		//char *name;
+		int score;
+		Point *list;
+		Color color;
+		GLint dir_x,dir_y;		
+		Snake();
+		~Snake();
+		void Draw();
+		void Update();
+}s[SNAKE];
+Snake::Snake()
+{
+	int x,y;
+	score=0;
+	dir_x=0;
+	dir_y=0;
+	srandom(random()%500);
+	do
+	{
+		x=random()%500;
+		y=random()%500;
+	}while(x<=100||y<=100);
+	switch(random()%4)
+	{
+		case 0:dir_x=+1;
+			//color.r==color.g=
+			break;
+		case 1:dir_x=-1;
+			break;
+		case 2:dir_y=+1;
+			break;
+		case 3:dir_y=-1;
+			break;
+	}
+	color.r=(float)((random()%4)/4.0);
+	color.g=(float)((random()%4)/4.0);
+	color.b=(float)((random()%4)/4.0);
+	Point *t=new Point(x,y);
+	list=t;
+	for(int i=0;i<10;i++)
+	{
+		x+=R*1.6*dir_x;
+		y+=R*1.6*dir_y;
+		Point *p=new Point(x,y);
+		t->next=p;
+		t=p;
+	}
+}
+Snake::~Snake()
+{
+	Point *t=list;
+	while(t->next!=NULL)
+	{
+		Point *p=t;
+		t=t->next;
+		delete p;
+	}
+	delete t;
+}
+void Snake::Draw()
+{
+	Point *temp;
+	temp=list;
+	while(temp->next!=NULL)
+	{
+	//	printf("%d %d\n",temp->x,temp->y);
+		circle(temp->x,temp->y,R);
+		temp=temp->next;
+	}
+	circle(temp->x,temp->y,R);
+				
+}			
+		
+void Snake::Update()
+{
+	Point *t;
+	t=list;
+	list=list->next;
+	free(t);
+	t=list;
+	while(t->next!=NULL)
+		t=t->next;
+	Point *p=new Point(t->x+dir_x*R*1.6,t->y+dir_y*R*1.6);
+	t->next=p;
+	t=t->next;
+	if(t->x>=winWidth)
+		t->x-=winWidth;
+	if(t->y>=winHeight)
+		t->y-=winHeight;
+	if(t->x<=0)
+		t->x+=winWidth;
+	if(t->y<=0)
+		t->y+=winHeight;
+	//do touch food?
+	for(int i=0;i<FOOD;i++)
+	{
+		if(sqrt((f[i].x-t->x)*(f[i].x-t->x)+(f[i].y-t->y)*(f[i].y-t->y))<2*R)
+		{
+			f[i].Generate();
+			score+=10;
+			if(score%30==0)
+			{
+				t=list;
+				while(t->next!=NULL)
+					t=t->next;
+				Point *p=new Point(t->x+dir_x*R*1.6,t->y+dir_y*R*1.6);
+				t->next=p;
+				t=t->next;
+				if(t->x>=winWidth)
+					t->x-=winWidth;
+				if(t->y>=winHeight)
+					t->y-=winHeight;
+				if(t->x<=0)
+					t->x+=winWidth;
+				if(t->y<=0)
+					t->y+=winHeight;
+			}	
+		}
+	}
+}
+//GLsizei winWidth=500,winHeight=500;
+void output(int x, int y,void * font, char *string)
+{
+	int len, i;
+	glRasterPos2f(x, y);
+	len = (int) strlen(string);
+	for (i = 0; i < len; i++) 
+	{
+		glutBitmapCharacter(font, string[i]);
+	}
+}
+
+void draw()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	char text[15];
+	for(int i=0;i<SNAKE;i++)
+	{
+		glColor3f(s[i].color.r,s[i].color.g,s[i].color.b);
+		s[i].Draw();
+	}
+	for(int i=0;i<FOOD;i++)
+	{
+		glColor3f(f[i].color.r,f[i].color.g,f[i].color.b);
+		circle(f[i].x,f[i].y,R);
+	}
+	glColor3f(1,1,1);
+	for(int i=0;i<SNAKE;i++)
+	{
+		sprintf(text,"Snake%d   %d",i,s[i].score);
+		output(winWidth-150,winHeight-20-i*20,GLUT_BITMAP_TIMES_ROMAN_24,text);
+	}
+	glutSwapBuffers();
+	glFlush();
+}
+void adjust(int i)
+{
+	if(s[i].list->x+150>=winWidth)
+	{
+		s[i].dir_x=0;
+		s[i].dir_y=1;
+	}
+	if(s[i].list->y+180>=winHeight)
+	{
+		s[i].dir_x=-1;
+		s[i].dir_y=0;
+	}
+	if(s[i].list->x-180<=0)
+	{
+		s[i].dir_x=0;
+		s[i].dir_y=-1;
+	}
+	if(s[i].list->y-150<=0)
+	{
+		s[i].dir_x=1;
+		s[i].dir_y=0;
+	}
+}
+
+void repeat()
+{
+
+	char text[15];
+	for(int i=0;i<SNAKE;i++)
+	{
+		s[i].Update();
+		
+	}
+	glColor3f(1,1,1);
+	//display();
+	//output(100,100,text);
+	usleep(100000);
+	draw();
+}
+void p1(GLint key,GLint x,GLint y)
+{
+	switch(key)
+	{
+		case GLUT_KEY_LEFT:	if(s[0].dir_x!=1)
+						s[0].dir_x=-1;
+					s[0].dir_y=0;
+					break;
+		case GLUT_KEY_RIGHT:	if(s[0].dir_x!=-1)
+						s[0].dir_x=1;
+					s[0].dir_y=0;
+					break;
+		case GLUT_KEY_UP:	if(s[0].dir_y!=-1)
+						s[0].dir_y=1;
+					s[0].dir_x=0;
+					break;
+		case GLUT_KEY_DOWN:	if(s[0].dir_y!=1)	
+						s[0].dir_y=-1;
+					s[0].dir_x=0;
+	}
+}
+void p2(GLubyte key,GLint x,GLint y)
+{
+	switch(key)
+	{
+		case 'a':	if(s[1].dir_x!=1)
+						s[1].dir_x=-1;
+					s[1].dir_y=0;
+					break;
+		case 'd':	if(s[1].dir_x!=-1)
+						s[1].dir_x=1;
+					s[1].dir_y=0;
+					break;
+		case 'w':	if(s[1].dir_y!=-1)
+						s[1].dir_y=1;
+					s[1].dir_x=0;
+					break;
+		case 's':	if(s[1].dir_y!=1)	
+						s[1].dir_y=-1;
+					s[1].dir_x=0;
+	}
+}
+void logo()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	glColor3f(1.0,0.0,1.0);
+	char text[10];
+	//glrasterPos2f( 100,100 );
+	strcpy(text,"Snake Game Demo");
+	output(winWidth/2-100,winHeight/2-100,GLUT_BITMAP_TIMES_ROMAN_24,text);
+	glutSwapBuffers();
+	sleep(4);
+}
+void winReshapeFcn(GLint newWidth,GLint newHeight)
+{
+	glMatrixMode(GL_PROJECTION);
+	glClear(GL_COLOR_BUFFER_BIT);
+	//gluOrtho2D(0,winWidth,0,winHeight);
+}
+void gameover()
+{
+	char text[30];
+	glClear(GL_COLOR_BUFFER_BIT);
+	for(int i=0;i<SNAKE;i++)
+	{
+		sprintf(text,"Snake%d   %d",i,s[i].score);
+		output(winWidth/2-strlen(text)/2,winHeight/2-i*20,GLUT_BITMAP_TIMES_ROMAN_24,text);
+	}
+	int w=0;
+	for(int i=0;i<SNAKE;i++)
+	{
+		if(s[i].score>s[w].score)
+			w=i;
+	}
+	
+	sprintf(text,"Snake %d won the game",w);
+	output(winWidth/2-strlen(text)/2,winHeight/2+150,GLUT_BITMAP_TIMES_ROMAN_24,text);
+	glutSwapBuffers();
+	//glFlush();
+}
+void timer_func(int n)
+{
+	static int v=0;
+	v+=5;
+	if(v>=60)
+	{
+		gameover();
+		sleep(5);
+		v=0;
+		for(int i=0;i<SNAKE;i++)
+			s[i].score=0;
+	}
+	glutTimerFunc(5000, timer_func, 5000);
+	printf("%d \n",v);
+}
+int main(int argc,char *argv[])
+{
+	glutInit(&argc,argv);
+	glutInitDisplayMode(GLUT_SINGLE|GLUT_RGB);
+	glutInitWindowPosition(100,100);
+	glutInitWindowSize(winWidth,winHeight);
+
+	glutCreateWindow("Testing");
+//	glutFullScreen();	
+	init();
+	logo();
+	glutDisplayFunc(draw);
+	glutReshapeFunc(winReshapeFcn);
+	glutSpecialFunc(p1);
+	glutKeyboardFunc(p2);
+	glutTimerFunc(5000, timer_func, 5000);
+	glutIdleFunc(repeat);	
+	glutMainLoop();
+}
