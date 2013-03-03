@@ -9,7 +9,6 @@
 #define FOOD 1
 #define winWidth 500
 #define winHeight 200
-int a=0;
 using namespace std;
 class Color
 {
@@ -42,12 +41,10 @@ class Point
 {
 	public:
 		int x,y;
-		Point *next;
-		Point(int x,int y)
+		void set(int x,int y)
 		{
 			Point::x=x;
 			Point::y=y;
-			next=NULL;
 		}
 };
 class Snake
@@ -56,29 +53,25 @@ class Snake
 		//char *name;
 		char name[20];
 		int score;
-		Point *list;
+		int cords;  //length of snake
+		Point list[20];
 		Color color;
 		int dir_x,dir_y;		
-		//Snake();
-		~Snake();
 		void setCoordinates(int ,int);
 		void Draw();
 		void Update();
 		friend ostream& operator<<(ostream &mycout,Snake s);
-};
+}snakes[5];
 void Snake::setCoordinates(int x,int y)
 {
-	Point *t=new Point(x,y);
-	list=t;
+	list[0].set(x,y);
 	for(int i=0;i<10;i++)
 	{
 		x+=R*1.6*dir_x;
 		y+=R*1.6*dir_y;
-		Point *p=new Point(x,y);
-		t->next=p;
-		t=p;
+		list[i+1].set(x,y);
 	}
-	t->next=NULL;
+	cords=11;
 }
 ostream &operator<<(ostream &mycout,Snake s)
 {
@@ -86,81 +79,27 @@ ostream &operator<<(ostream &mycout,Snake s)
 	cout<<"Name\t"<<s.name<<endl;
 	cout<<"Score\t"<<s.score<<endl;
 	cout<<"Cordinates\t"<<endl;
-	Point *temp=s.list;
-	while(temp->next!=NULL)
-	{
-		cout<<"("<<temp->x<<","<<temp->y<<"),";
-		temp=temp->next;
-	}
-	cout<<"("<<temp->x<<","<<temp->y<<")"<<endl;;
+	for(int i=0;i<s.cords;i++)
+		cout<<"("<<s.list[i].x<<","<<s.list[i].y<<"),";
 	cout<<"Color\t"<<"("<<s.color.r<<","<<s.color.g<<","<<s.color.b<<")"<<endl;
 	cout<<"Direction\t"<<s.dir_x<<","<<s.dir_y<<endl;
 	return mycout;
 }
-Snake::~Snake()
-{
-	Point *t=list;
-	cout<<"a="<<a<<endl;
-	int i=0;
-	while(t->next!=NULL)
-	{
-		Point *p=t;
-		t=t->next;
-		cout<<"("<<p->x<<","<<p->y<<")"<<endl;
-		delete p;
-		cout<<i++<<endl;
-	}
-	cout<<"out of loop";
-	cout<<"("<<t->x<<","<<t->y<<")"<<endl;
-	delete t;
-	cout<<"deleted t"<<endl;
-}
-		
+
 void Snake::Update()
 {
-	Point *t;
-	t=list;
-	list=list->next;
-	free(t);
-	t=list;
-	while(t->next!=NULL)
-		t=t->next;
-	Point *p=new Point(t->x+dir_x*R*1.6,t->y+dir_y*R*1.6);
-	t->next=p;
-	t=t->next;
-	if(t->x>=winWidth)
-		t->x-=winWidth;
-	if(t->y>=winHeight)
-		t->y-=winHeight;
-	if(t->x<=0)
-		t->x+=winWidth;
-	if(t->y<=0)
-		t->y+=winHeight;
-	//do touch food?
-	for(int i=0;i<FOOD;i++)
+	for(int i=0;i<cords;i++)
 	{
-		if(sqrt((f[i].x-t->x)*(f[i].x-t->x)+(f[i].y-t->y)*(f[i].y-t->y))<2*R)
-		{
-			f[i].Generate();
-			score+=10;
-			if(score%30==0)
-			{
-				t=list;
-				while(t->next!=NULL)
-					t=t->next;
-				Point *p=new Point(t->x+dir_x*R*1.6,t->y+dir_y*R*1.6);
-				t->next=p;
-				t=t->next;
-				if(t->x>=winWidth)
-					t->x-=winWidth;
-				if(t->y>=winHeight)
-					t->y-=winHeight;
-				if(t->x<=0)
-					t->x+=winWidth;
-				if(t->y<=0)
-					t->y+=winHeight;
-			}	
-		}
+		list[i].x+=dir_x*R*1.6;
+		list[i].y+=dir_y*R*1.6;
+		if(list[i].x>=winWidth)
+			list[i].x-=winWidth;
+		else if(list[i].x<=0)
+			list[i].x+=winWidth;
+		if(list[i].y>=winHeight)
+			list[i].y-=winHeight;
+		else if(list[i].y<=0)
+			list[i].y+=winHeight;
 	}
 }
 int main()
@@ -170,7 +109,6 @@ int main()
 	sockaddr_in address;
 	int result;
 	int count;
-	Snake snakes[5];
 	
 	sockfd=socket(AF_INET,SOCK_STREAM,0);
 	
@@ -185,7 +123,6 @@ int main()
 		cout<<"Failed to connect"<<endl;
 		exit(1);
 	}
-	cout<<"Going to read socket"<<endl;
 	read(sockfd,&count,sizeof(int));
 	cout<<"Number of clients = "<<count<<endl;
 	for(int i=0;i<count;i++)
@@ -200,12 +137,7 @@ int main()
 		read(sockfd,c,sizeof(c));
 		snakes[i].setCoordinates(c[0],c[1]);
 		cout<<snakes[i];
-		//cout<<snakes[i];
-		cout<<"out of cout"<<endl;
 	}
-	a++;
-	cout<<"out of loop"<<endl;
-	cout<<sockfd<<endl;
 	close(sockfd);
 	return 0;
 }
