@@ -7,8 +7,9 @@
 #include<GL/glut.h>
 #include<math.h>
 #define R 10
-#define FOOD 1
 #define PI 3.14
+#define FOOD 4
+int fcount;
 GLint winWidth=800;
 GLint winHeight=600;
 int id;
@@ -84,7 +85,7 @@ class Snake
 		void Draw();
 		void Update();
 		friend ostream& operator<<(ostream &mycout,Snake s);
-}snakes[5];
+}snake[5];
 void Snake::setCoordinates(int x,int y)
 {
 	list[0].set(x,y);
@@ -117,23 +118,6 @@ ostream &operator<<(ostream &mycout,Snake s)
 	return mycout;
 }
 
-void Snake::Update()
-{
-	for(int i=0;i<cords;i++)
-	{
-		list[i].x+=dir_x*R*1.6;
-		list[i].y+=dir_y*R*1.6;
-		if(list[i].x>=winWidth)
-			list[i].x-=winWidth;
-		else if(list[i].x<=0)
-			list[i].x+=winWidth;
-		if(list[i].y>=winHeight)
-			list[i].y-=winHeight;
-		else if(list[i].y<=0)
-			list[i].y+=winHeight;
-	}
-}
-
 int sockfd;
 int len;
 sockaddr_in address;
@@ -155,21 +139,15 @@ void getInitial()
 		cout<<"Failed to connect"<<endl;
 		exit(1);
 	}
-	read(sockfd,&id,sizeof(id));
 	read(sockfd,&count,sizeof(int));
 	cout<<"Number of clients = "<<count<<endl;
 	for(int i=0;i<count;i++)
 	{
 		cout<<i<<endl;
-		read(sockfd,snakes[i].name,sizeof(snakes[i].name));
-		read(sockfd,&snakes[i].score,sizeof(snakes[i].score));
-		read(sockfd,&snakes[i].color,sizeof(snakes[i].color));
-		read(sockfd,&snakes[i].dir_x,sizeof(snakes[i].dir_x));
-		read(sockfd,&snakes[i].dir_y,sizeof(snakes[i].dir_y));
-		int c[2]; // initial coordinates
-		read(sockfd,c,sizeof(c));
-		snakes[i].setCoordinates(c[0],c[1]);
-		cout<<snakes[i];
+		read(sockfd,snake[i].name,sizeof(snake[i].name));
+		read(sockfd,&snake[i].score,sizeof(snake[i].score));
+		read(sockfd,&snake[i].color,sizeof(snake[i].color));
+		cout<<snake[i];
 	}
 	//close(sockfd);
 }
@@ -178,11 +156,14 @@ void draw()
 	glClear(GL_COLOR_BUFFER_BIT);
 	for(int i=0;i<count;i++)
 	{
-		glColor3f(snakes[i].color.r,snakes[i].color.g,snakes[i].color.b);
-		snakes[i].Draw();
+		glColor3f(snake[i].color.r,snake[i].color.g,snake[i].color.b);
+		snake[i].Draw();
 	}
-	glColor3f(1,1,1);
-	circle(10,10,10);
+	for(int i=0;i<fcount;i++)
+	{
+		glColor3f(f[i].color.r,f[i].color.g,f[i].color.b);
+		circle(f[i].x,f[i].y,R);
+	}
 	glutSwapBuffers();
 	glFlush();
 }
@@ -190,53 +171,75 @@ void p1(GLint key,GLint x,GLint y)
 {
 	switch(key)
 	{
-		case GLUT_KEY_LEFT:	if(snakes[id].dir_x!=1)
-						snakes[id].dir_x=-1;
-					snakes[id].dir_y=0;
+		case GLUT_KEY_LEFT:	if(snake[id].dir_x!=1)
+						snake[id].dir_x=-1;
+					snake[id].dir_y=0;
 					break;
-		case GLUT_KEY_RIGHT:	if(snakes[id].dir_x!=-1)
-						snakes[id].dir_x=1;
-					snakes[id].dir_y=0;
+		case GLUT_KEY_RIGHT:	if(snake[id].dir_x!=-1)
+						snake[id].dir_x=1;
+					snake[id].dir_y=0;
 					break;
-		case GLUT_KEY_UP:	if(snakes[id].dir_y!=-1)
-						snakes[id].dir_y=1;
-					snakes[id].dir_x=0;
+		case GLUT_KEY_UP:	if(snake[id].dir_y!=-1)
+						snake[id].dir_y=1;
+					snake[id].dir_x=0;
 					break;
-		case GLUT_KEY_DOWN:	if(snakes[id].dir_y!=1)	
-						snakes[id].dir_y=-1;
-					snakes[id].dir_x=0;
+		case GLUT_KEY_DOWN:	if(snake[id].dir_y!=1)	
+						snake[id].dir_y=-1;
+					snake[id].dir_x=0;
 	}
 	int dir[2];
-	dir[0]=snakes[id].dir_x;
-	dir[1]=snakes[id].dir_y;
+	dir[0]=snake[id].dir_x;
+	dir[1]=snake[id].dir_y;
 	cout<<dir[0]<<dir[1];
 	write(sockfd,dir,sizeof(dir));
 }
+struct Cordxy
+{
+	int x,y;
+};
 void repeat()
 {
-	int dir[2];
+	Cordxy cordxy[20];
 	for(int i=0;i<count;i++)
 	{
-		read(sockfd,dir,sizeof(dir));
-		snakes[i].dir_x=dir[0];
-		snakes[i].dir_y=dir[1];
+		read(sockfd,&snake[i].score,sizeof(snake[i].score));
+		read(sockfd,&snake[i].cords,sizeof(snake[i].cords));
+		cout<<snake[i].cords<<endl;
+		read(sockfd,cordxy,sizeof(cordxy));
+		for(int j=0;j<snake[i].cords;j++)
+		{
+			snake[i].list[j].set(cordxy[j].x,cordxy[j].y);
+			cout<<cordxy[j].x<<","<<cordxy[j].y<<endl;
+		}
+					
 	}
-	for(int i=0;i<count;i++)
+	read(sockfd,&fcount,sizeof(fcount));
+	for(int i=0;i<fcount;i++)
 	{
-		snakes[i].Update();
-		
+		read(sockfd,&f[i].color,sizeof(f[i].color));
+		Cordxy pos;
+		read(sockfd,&pos,sizeof(pos));
+		f[i].x=pos.x;
+		f[i].y=pos.y;
 	}
 	glColor3f(1,1,1);
 	//display();
 	//output(100,100,text);
-	usleep(100000);
+	usleep(1000);
 	draw();
 }
-void winReshapeFcn(GLint newWidth,GLint newHeight)
+/*void winReshapeFcn(GLint newWidth,GLint newHeight)
 {
 	glMatrixMode(GL_PROJECTION);
 	glClear(GL_COLOR_BUFFER_BIT);
 	gluOrtho2D(0,winWidth,0,winHeight);
+}*/
+void reshape (int w, int h)
+{
+	// Window size has changed stuff goes here.
+	gluOrtho2D (0, w,0,h);
+	glMatrixMode (GL_PROJECTION);
+	glLoadIdentity ();
 }
 int main(int argc,char *argv[])
 {
@@ -247,11 +250,11 @@ int main(int argc,char *argv[])
 	glutInitWindowSize(winWidth,winHeight);
 
 	
-//	glutFullScreen();
+	//glutFullScreen();
 	getInitial();//get snake details from server
 	glutCreateWindow("Snake Game");
 	glutDisplayFunc(draw);
-	glutReshapeFunc(winReshapeFcn);
+	glutReshapeFunc(reshape);
 	glutSpecialFunc(p1);
 	glutIdleFunc(repeat);	
 	glutMainLoop();

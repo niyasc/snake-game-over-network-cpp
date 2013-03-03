@@ -1,0 +1,85 @@
+//STL headers
+#include <string>
+#include <utility>
+
+//OpenGL support
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#include <GL/glut.h>
+
+//glFont headers
+#include "glfont2.h"
+using namespace glfont;
+
+//Header for this file
+#include "testbed.h"
+
+//glFont
+GLFont myfont;
+
+//*********************************************************
+//Functions
+//*********************************************************
+bool TestBedInit (void)
+{
+	//Initialize OpenGL
+	glClearColor(0.0, 0.0, 0.0, 1.0);	
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	//Try and load our font
+	if (!myfont.Create("verdana.glf", 1))
+		return false;
+
+	//Return successfully
+	return true;
+}
+//*********************************************************
+void TestBedShutdown (void)
+{
+	//Destroy our font
+	myfont.Destroy();
+}
+//*********************************************************
+void TestBedViewport (int width, int height)
+{
+	//Initialize the viewport
+	glViewport(0, 0, width, height);
+
+	//Initialize OpenGL projection matrix
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0.0, 640.0, 0.0, 480.0);
+}
+//*********************************************************
+void TestBedRender (void)
+{
+	float top_color[3] = {1.0F, 1.0F, 1.0F};
+	float bottom_color[3] = {0.0F, 0.0F, 1.0F};
+
+	//Clear back buffer
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	//Initialize modelview matrix
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	//Draw some strings
+	glColor3f(0.0F, 0.0F, 1.0F);
+	myfont.Begin();
+	myfont.DrawString("Hello World!", 2.0F, 0.0F, 480.0F);
+	myfont.DrawString(L"Hello World!", 2.0F, 0.0F,
+		400.0F, top_color, bottom_color);
+	myfont.DrawString(std::string("Hello World!"), 0.0F, 320.0F);
+	myfont.DrawString(std::wstring(L"Hello World!"), 0.0F, 280.F,
+		top_color, bottom_color);
+	glTranslatef(0.0F, 200.F, 0.0F);
+	glRotatef(15.0F, 0.0F, 0.0F, 1.0F);
+	myfont.DrawString("Hello World!", 2.0F, 0.0F, 0.F,
+		top_color, bottom_color);
+}
+//*********************************************************
+
+//End of file

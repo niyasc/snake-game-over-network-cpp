@@ -7,8 +7,8 @@
 #include<netinet/in.h> //accept
 #include<pthread.h> //multithreading
 #include<math.h>
-#define winWidth 500
-#define winHeight 200
+#define winWidth 800
+#define winHeight 600
 #define CLIENTS 2
 #define R 10
 #define FOOD 1
@@ -40,19 +40,31 @@ class Food
 			y=random()%winHeight;
 		}
 }f[FOOD];
+class Point
+{
+	public:
+		int x,y;
+		Point *next;
+		Point(int x,int y)
+		{
+			Point::x=x;
+			Point::y=y;
+			next=NULL;
+		}
+};
 class Snake
 {
 	public:
 		//char *name;
 		char name[20];
 		int score;
-		int c[2];
+		Point *list;
 		Color color;
 		int dir_x,dir_y;		
 		Snake();
-		void Draw();
+		~Snake();
 		void Update();
-}snakes[5];
+}snake[CLIENTS];
 Snake::Snake()
 {
 	int x,y;
@@ -65,8 +77,6 @@ Snake::Snake()
 		x=random()%500;
 		y=random()%500;
 	}while(x<=100||y<=100);
-	c[0]=x;
-	c[1]=y;
 	switch(random()%4)
 	{
 		case 0:dir_x=+1;
@@ -82,7 +92,75 @@ Snake::Snake()
 	color.r=(float)((random()%4)/4.0);
 	color.g=(float)((random()%4)/4.0);
 	color.b=(float)((random()%4)/4.0);
-}		
+	Point *t=new Point(x,y);
+	list=t;
+	for(int i=0;i<10;i++)
+	{
+		x+=R*1.6*dir_x;
+		y+=R*1.6*dir_y;
+		Point *p=new Point(x,y);
+		t->next=p;
+		t=p;
+	}
+}
+Snake::~Snake()
+{
+	Point *t=list;
+	while(t->next!=NULL)
+	{
+		Point *p=t;
+		t=t->next;
+		delete p;
+	}
+	delete t;
+}
+void Snake::Update()
+{
+	Point *t;
+	t=list;
+	list=list->next;
+	free(t);
+	t=list;
+	while(t->next!=NULL)
+		t=t->next;
+	Point *p=new Point(t->x+dir_x*R*1.6,t->y+dir_y*R*1.6);
+	t->next=p;
+	t=t->next;
+	if(t->x>=winWidth)
+		t->x-=winWidth;
+	if(t->y>=winHeight)
+		t->y-=winHeight;
+	if(t->x<=0)
+		t->x+=winWidth;
+	if(t->y<=0)
+		t->y+=winHeight;
+	//do touch food?
+	for(int i=0;i<FOOD;i++)
+	{
+		if(sqrt((f[i].x-t->x)*(f[i].x-t->x)+(f[i].y-t->y)*(f[i].y-t->y))<2*R)
+		{
+			f[i].Generate();
+			score+=10;
+			if(score%30==0)
+			{
+				t=list;
+				while(t->next!=NULL)
+					t=t->next;
+				Point *p=new Point(t->x+dir_x*R*1.6,t->y+dir_y*R*1.6);
+				t->next=p;
+				t=t->next;
+				if(t->x>=winWidth)
+					t->x-=winWidth;
+				if(t->y>=winHeight)
+					t->y-=winHeight;
+				if(t->x<=0)
+					t->x+=winWidth;
+				if(t->y<=0)
+					t->y+=winHeight;
+			}	
+		}
+	}
+}
 void *serve(void *);  //client serving function prototype
 int id=0;//client id
 int count=0;//Number of clients connected
@@ -141,8 +219,8 @@ int Read(int sock,int msecs,int id)
 			return 0;
 		case 1: // success - input activity detected.
 			read(fd, dir, sizeof(dir));
-			snakes[id].dir_x=dir[0];
-			snakes[id].dir_y=dir[1];
+			snake[id].dir_x=dir[0];
+			snake[id].dir_y=dir[1];
 			cout<<dir[0]<<dir[1];
 			return 1;
 		default: // error
@@ -150,10 +228,17 @@ int Read(int sock,int msecs,int id)
 	}
 
 }
+struct Cord
+{
+	int x,y;
+};
+int p;
 void *serve(void *arg)
 {
 	int id=::id;
 	int client_sockfd = *((int*)arg);
+	if(!id)
+		p=client_sockfd;
 	::id++;
 	while(count<CLIENTS)
 	{
@@ -161,28 +246,54 @@ void *serve(void *arg)
 	}
 	cout<<"Number of clients= "<<count<<endl;
 	cout<<"my sockfd"<<client_sockfd<<endl;
-	write(client_sockfd,&id,sizeof(id));
 	write(client_sockfd,&count,sizeof(count));
 	for(int i=0;i<CLIENTS;i++)
 	{
 		//write(client_sockfd,&id,sizeof(d));
-		//write(client_sockfd,&snakes[i],sizeof(snakes[id]));
-		write(client_sockfd,snakes[i].name,sizeof(snakes[i].name));
-		write(client_sockfd,&snakes[i].score,sizeof(snakes[i].score));
-		write(client_sockfd,&snakes[i].color,sizeof(snakes[i].color));
-		write(client_sockfd,&snakes[i].dir_x,sizeof(snakes[i].dir_x));
-		write(client_sockfd,&snakes[i].dir_y,sizeof(snakes[i].dir_y));
-		write(client_sockfd,snakes[i].c,sizeof(snakes[i].c));
+		//write(client_sockfd,&snake[i],sizeof(snake[id]));
+		write(client_sockfd,snake[i].name,sizeof(snake[i].name));
+		write(client_sockfd,&snake[i].score,sizeof(snake[i].score));
+		write(client_sockfd,&snake[i].color,sizeof(snake[i].color));
 	}
+	Cord cordxy[20];
+	int cords;
 	while(1)
 	{
-		Read(client_sockfd,500,id);
+		if(p==client_sockfd)
+		{
+			for(int i=0;i<CLIENTS;i++)
+				snake[i].Update();
+		}
+		Read(client_sockfd,100,id);
 		for(int i=0;i<CLIENTS;i++)
 		{
-			int dir[2];
-			dir[0]=snakes[i].dir_x;
-			dir[1]=snakes[i].dir_y;
-			write(client_sockfd,dir,sizeof(dir));
+			cords=0;
+			write(client_sockfd,&snake[i].score,sizeof(snake[i].score));
+			Point *temp=snake[i].list;
+			while(temp->next!=NULL)
+			{
+				cordxy[cords].x=temp->x;
+				cordxy[cords].y=temp->y;
+				cords++;
+				temp=temp->next;
+			}
+			cordxy[cords].x=temp->x;
+			cordxy[cords].y=temp->y;
+			cords++;
+			write(client_sockfd,&cords,sizeof(cords));
+			write(client_sockfd,cordxy,sizeof(cordxy));
+			//usleep(1000);	
+			
+		}
+		int fcount=FOOD;
+		write(client_sockfd,&fcount,sizeof(fcount));
+		for(int i=0;i<FOOD;i++)
+		{
+			write(client_sockfd,&f[i].color,sizeof(f[i].color));
+			Cord pos;
+			pos.x=f[i].x;
+			pos.y=f[i].y;
+			write(client_sockfd,&pos,sizeof(pos));
 		}
 	}		
 	close(client_sockfd);
