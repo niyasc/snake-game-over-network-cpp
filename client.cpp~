@@ -4,11 +4,34 @@
 #include<stdlib.h>
 #include<arpa/inet.h>
 #include<stdio.h>
+#include<GL/glut.h>
 #include<math.h>
 #define R 10
 #define FOOD 1
-#define winWidth 500
-#define winHeight 200
+#define PI 3.14
+GLint winWidth=800;
+GLint winHeight=600;
+int id;
+void init()
+{
+	glClearColor(1.0,1.0,0.0,0.0);
+	glMatrixMode(GL_PROJECTION);
+	gluOrtho2D(0,winWidth,0,winHeight);
+
+}
+void circle(float x, float y, float r) 
+{ 
+	float delta_theta = 0.01;
+	glBegin(GL_POINTS);
+		glVertex2i(24,33);
+	glEnd();
+	glBegin( GL_POLYGON ); // OR GL_LINE_LOOP
+
+		for( float angle = 0; angle < 2*PI; angle += delta_theta )
+		glVertex3f(x+ r*cos(angle), y+r*sin(angle), 0 );
+
+	glEnd();
+}
 using namespace std;
 class Color
 {
@@ -71,7 +94,15 @@ void Snake::setCoordinates(int x,int y)
 		y+=R*1.6*dir_y;
 		list[i+1].set(x,y);
 	}
+	dir_x=0;
+	dir_y=1;
 	cords=11;
+}
+void Snake::Draw()
+{
+	for(int i=0;i<cords;i++)
+		circle(list[i].x,list[i].y,R);
+				
 }
 ostream &operator<<(ostream &mycout,Snake s)
 {
@@ -102,16 +133,17 @@ void Snake::Update()
 			list[i].y+=winHeight;
 	}
 }
-int main()
+
+int sockfd;
+int len;
+sockaddr_in address;
+int result;
+int count;
+
+void getInitial()
 {
-	int sockfd;
-	int len;
-	sockaddr_in address;
-	int result;
-	int count;
-	
 	sockfd=socket(AF_INET,SOCK_STREAM,0);
-	
+
 	address.sin_family=AF_INET;
 	address.sin_addr.s_addr=inet_addr("127.0.0.1");
 	address.sin_port=htons(53000);
@@ -123,7 +155,7 @@ int main()
 		cout<<"Failed to connect"<<endl;
 		exit(1);
 	}
-	cout<<"Going to read socket"<<endl;
+	read(sockfd,&id,sizeof(id));
 	read(sockfd,&count,sizeof(int));
 	cout<<"Number of clients = "<<count<<endl;
 	for(int i=0;i<count;i++)
@@ -139,6 +171,88 @@ int main()
 		snakes[i].setCoordinates(c[0],c[1]);
 		cout<<snakes[i];
 	}
-	close(sockfd);
-	return 0;
+	//close(sockfd);
+}
+void draw()
+{
+	glClear(GL_COLOR_BUFFER_BIT);
+	for(int i=0;i<count;i++)
+	{
+		glColor3f(snakes[i].color.r,snakes[i].color.g,snakes[i].color.b);
+		snakes[i].Draw();
+	}
+	glColor3f(1,1,1);
+	circle(10,10,10);
+	glutSwapBuffers();
+	glFlush();
+}
+void p1(GLint key,GLint x,GLint y)
+{
+	switch(key)
+	{
+		case GLUT_KEY_LEFT:	if(snakes[id].dir_x!=1)
+						snakes[id].dir_x=-1;
+					snakes[id].dir_y=0;
+					break;
+		case GLUT_KEY_RIGHT:	if(snakes[id].dir_x!=-1)
+						snakes[id].dir_x=1;
+					snakes[id].dir_y=0;
+					break;
+		case GLUT_KEY_UP:	if(snakes[id].dir_y!=-1)
+						snakes[id].dir_y=1;
+					snakes[id].dir_x=0;
+					break;
+		case GLUT_KEY_DOWN:	if(snakes[id].dir_y!=1)	
+						snakes[id].dir_y=-1;
+					snakes[id].dir_x=0;
+	}
+	int dir[2];
+	dir[0]=snakes[id].dir_x;
+	dir[1]=snakes[id].dir_y;
+	cout<<dir[0]<<dir[1];
+	write(sockfd,dir,sizeof(dir));
+}
+void repeat()
+{
+	int dir[2];
+	for(int i=0;i<count;i++)
+	{
+		read(sockfd,dir,sizeof(dir));
+		snakes[i].dir_x=dir[0];
+		snakes[i].dir_y=dir[1];
+	}
+	for(int i=0;i<count;i++)
+	{
+		snakes[i].Update();
+		
+	}
+	glColor3f(1,1,1);
+	//display();
+	//output(100,100,text);
+	usleep(100000);
+	draw();
+}
+void winReshapeFcn(GLint newWidth,GLint newHeight)
+{
+	glMatrixMode(GL_PROJECTION);
+	glClear(GL_COLOR_BUFFER_BIT);
+	gluOrtho2D(0,winWidth,0,winHeight);
+}
+int main(int argc,char *argv[])
+{
+	glutInit(&argc,argv);	
+	init();
+	glutInitDisplayMode(GLUT_SINGLE|GLUT_RGB);
+	glutInitWindowPosition(100,100);
+	glutInitWindowSize(winWidth,winHeight);
+
+	
+//	glutFullScreen();
+	getInitial();//get snake details from server
+	glutCreateWindow("Snake Game");
+	glutDisplayFunc(draw);
+	glutReshapeFunc(winReshapeFcn);
+	glutSpecialFunc(p1);
+	glutIdleFunc(repeat);	
+	glutMainLoop();
 }

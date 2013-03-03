@@ -121,18 +121,47 @@ int main()
 	}
 	return 0;
 }
+int Read(int sock,int msecs,int id)
+{
+	struct timeval val;
+	//static int i=0;
+	fd_set set;
+	int dir[2];
+	int fd=sock;
+
+	val.tv_sec = (msecs / 1000);
+	val.tv_usec = (msecs % 1000) * 1000;
+
+	FD_ZERO(&set);
+	FD_SET(fd, &set);
+	//printf(" %d\n",i++);
+	switch (select(fd + 1, &set,0,0,&val))
+	{
+		case 0: // timeout - treat it like an error.
+			return 0;
+		case 1: // success - input activity detected.
+			read(fd, dir, sizeof(dir));
+			snakes[id].dir_x=dir[0];
+			snakes[id].dir_y=dir[1];
+			cout<<dir[0]<<dir[1];
+			return 1;
+		default: // error
+			return 0;
+	}
+
+}
 void *serve(void *arg)
 {
-	static int id=::id;
+	int id=::id;
 	int client_sockfd = *((int*)arg);
 	::id++;
 	while(count<CLIENTS)
 	{
 		cout<<"\r Waiting for "<<(3-count)<<"clients";
 	}
-	sleep(1);
 	cout<<"Number of clients= "<<count<<endl;
 	cout<<"my sockfd"<<client_sockfd<<endl;
+	write(client_sockfd,&id,sizeof(id));
 	write(client_sockfd,&count,sizeof(count));
 	for(int i=0;i<CLIENTS;i++)
 	{
@@ -144,8 +173,18 @@ void *serve(void *arg)
 		write(client_sockfd,&snakes[i].dir_x,sizeof(snakes[i].dir_x));
 		write(client_sockfd,&snakes[i].dir_y,sizeof(snakes[i].dir_y));
 		write(client_sockfd,snakes[i].c,sizeof(snakes[i].c));
-		sleep(1);
 	}
+	while(1)
+	{
+		Read(client_sockfd,500,id);
+		for(int i=0;i<CLIENTS;i++)
+		{
+			int dir[2];
+			dir[0]=snakes[i].dir_x;
+			dir[1]=snakes[i].dir_y;
+			write(client_sockfd,dir,sizeof(dir));
+		}
+	}		
 	close(client_sockfd);
 	pthread_exit(arg);
 }
