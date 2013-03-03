@@ -9,7 +9,7 @@
 #include<math.h>
 #define winWidth 500
 #define winHeight 200
-#define CLIENTS 3
+#define CLIENTS 2
 #define R 10
 #define FOOD 1
 using namespace std;
@@ -40,29 +40,16 @@ class Food
 			y=random()%winHeight;
 		}
 }f[FOOD];
-class Point
-{
-	public:
-		int x,y;
-		Point *next;
-		Point(int x,int y)
-		{
-			Point::x=x;
-			Point::y=y;
-			next=NULL;
-		}
-};
 class Snake
 {
 	public:
 		//char *name;
 		char name[20];
 		int score;
-		Point *list;
+		int c[2];
 		Color color;
 		int dir_x,dir_y;		
 		Snake();
-		~Snake();
 		void Draw();
 		void Update();
 }snakes[5];
@@ -78,6 +65,8 @@ Snake::Snake()
 		x=random()%500;
 		y=random()%500;
 	}while(x<=100||y<=100);
+	c[0]=x;
+	c[1]=y;
 	switch(random()%4)
 	{
 		case 0:dir_x=+1;
@@ -93,76 +82,7 @@ Snake::Snake()
 	color.r=(float)((random()%4)/4.0);
 	color.g=(float)((random()%4)/4.0);
 	color.b=(float)((random()%4)/4.0);
-	Point *t=new Point(x,y);
-	list=t;
-	for(int i=0;i<10;i++)
-	{
-		x+=R*1.6*dir_x;
-		y+=R*1.6*dir_y;
-		Point *p=new Point(x,y);
-		t->next=p;
-		t=p;
-	}
-}
-Snake::~Snake()
-{
-	Point *t=list;
-	while(t->next!=NULL)
-	{
-		Point *p=t;
-		t=t->next;
-		delete p;
-	}
-	delete t;
-}			
-		
-void Snake::Update()
-{
-	Point *t;
-	t=list;
-	list=list->next;
-	free(t);
-	t=list;
-	while(t->next!=NULL)
-		t=t->next;
-	Point *p=new Point(t->x+dir_x*R*1.6,t->y+dir_y*R*1.6);
-	t->next=p;
-	t=t->next;
-	if(t->x>=winWidth)
-		t->x-=winWidth;
-	if(t->y>=winHeight)
-		t->y-=winHeight;
-	if(t->x<=0)
-		t->x+=winWidth;
-	if(t->y<=0)
-		t->y+=winHeight;
-	//do touch food?
-	for(int i=0;i<FOOD;i++)
-	{
-		if(sqrt((f[i].x-t->x)*(f[i].x-t->x)+(f[i].y-t->y)*(f[i].y-t->y))<2*R)
-		{
-			f[i].Generate();
-			score+=10;
-			if(score%30==0)
-			{
-				t=list;
-				while(t->next!=NULL)
-					t=t->next;
-				Point *p=new Point(t->x+dir_x*R*1.6,t->y+dir_y*R*1.6);
-				t->next=p;
-				t=t->next;
-				if(t->x>=winWidth)
-					t->x-=winWidth;
-				if(t->y>=winHeight)
-					t->y-=winHeight;
-				if(t->x<=0)
-					t->x+=winWidth;
-				if(t->y<=0)
-					t->y+=winHeight;
-			}	
-		}
-	}
-}
+}		
 void *serve(void *);  //client serving function prototype
 int id=0;//client id
 int count=0;//Number of clients connected
@@ -223,6 +143,8 @@ void *serve(void *arg)
 		write(client_sockfd,&snakes[i].color,sizeof(snakes[i].color));
 		write(client_sockfd,&snakes[i].dir_x,sizeof(snakes[i].dir_x));
 		write(client_sockfd,&snakes[i].dir_y,sizeof(snakes[i].dir_y));
+		write(client_sockfd,snakes[i].c,sizeof(snakes[i].c));
+		sleep(1);
 	}
 	close(client_sockfd);
 	pthread_exit(arg);
