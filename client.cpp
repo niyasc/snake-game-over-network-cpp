@@ -200,15 +200,17 @@ int main()
 		exit(1);
 	}
 	cout<<"Going to read socket"<<endl;
-	read(sockfd,&count,sizeof(int));
-	cout<<"Number of clients = "<<count;
+	int e=read(sockfd,&count,sizeof(int));
+	cout<<e<<endl;
+	cout<<"abc"<<endl;
+	cout<<"Number of clients = "<<count<<endl;
 	for(int i=0;i<count;i++)
 	{
-		write(sockfd,snakes[i].name,sizeof(snakes[i].name));
-		write(sockfd,&snakes[i].score,sizeof(snakes[i].score));
-		write(sockfd,&snakes[i].color,sizeof(snakes[i].color));
-		write(sockfd,&snakes[i].dir_x,sizeof(snakes[i].dir_x));
-		write(sockfd,&snakes[i].dir_y,sizeof(snakes[i].dir_y));
+		read(sockfd,snakes[i].name,sizeof(snakes[i].name));
+		read(sockfd,&snakes[i].score,sizeof(snakes[i].score));
+		read(sockfd,&snakes[i].color,sizeof(snakes[i].color));
+		read(sockfd,&snakes[i].dir_x,sizeof(snakes[i].dir_x));
+		read(sockfd,&snakes[i].dir_y,sizeof(snakes[i].dir_y));
 		cout<<snakes[i];
 		cout<<"out of cout"<<endl;
 	}	

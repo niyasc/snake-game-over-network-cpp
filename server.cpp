@@ -212,12 +212,13 @@ void *serve(void *arg)
 	}
 	sleep(1);
 	cout<<"Number of clients= "<<count<<endl;
+	cout<<"my sockfd"<<client_sockfd<<endl;
 	write(client_sockfd,&count,sizeof(count));
 	for(int i=0;i<CLIENTS;i++)
 	{
 		//write(client_sockfd,&id,sizeof(d));
 		//write(client_sockfd,&snakes[i],sizeof(snakes[id]));
-		write(client_sockfd,&snakes[i].name,sizeof(snakes[i].name));
+		write(client_sockfd,snakes[i].name,sizeof(snakes[i].name));
 		write(client_sockfd,&snakes[i].score,sizeof(snakes[i].score));
 		write(client_sockfd,&snakes[i].color,sizeof(snakes[i].color));
 		write(client_sockfd,&snakes[i].dir_x,sizeof(snakes[i].dir_x));
